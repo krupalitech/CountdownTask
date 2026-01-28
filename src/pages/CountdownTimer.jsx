@@ -23,12 +23,14 @@ const countdownSchema = yup.object().shape({
 function CountdownTimer() {
   const [inputTime, setInputTime] = useState("");
   const [remainingTime, setRemainingTime] = useState(0);
+  const [initialTime, setInitialTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState("");
+
   const intervalRef = useRef(null);
 
-  // Helper to clear interval
+  // Clear interval helper
   const clearTimerInterval = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -36,7 +38,7 @@ function CountdownTimer() {
     }
   }, []);
 
-  // Cleanup interval on unmount
+  // Cleanup on unmount
   useEffect(() => clearTimerInterval, [clearTimerInterval]);
 
   // Timer logic
@@ -59,7 +61,7 @@ function CountdownTimer() {
     return clearTimerInterval;
   }, [isActive, isPaused, clearTimerInterval]);
 
-  // Format time MM:SS
+  // Format MM:SS
   const formatTime = useCallback(seconds => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -70,9 +72,12 @@ function CountdownTimer() {
   const handleStart = useCallback(async () => {
     try {
       setError("");
+
       const validated = await countdownSchema.validate({
         time: inputTime ? parseInt(inputTime, 10) : undefined,
       });
+
+      setInitialTime(validated.time);
       setRemainingTime(validated.time);
       setIsActive(true);
       setIsPaused(false);
@@ -81,16 +86,22 @@ function CountdownTimer() {
     }
   }, [inputTime]);
 
-  const handlePause = useCallback(() => setIsPaused(true), []);
-  const handleResume = useCallback(() => setIsPaused(false), []);
+  const handlePause = useCallback(() => {
+    setIsPaused(true);
+  }, []);
+
+  const handleResume = useCallback(() => {
+    setIsPaused(false);
+  }, []);
+
+  // Reset → stop timer + restore counter ONLY
   const handleReset = useCallback(() => {
     setIsActive(false);
     setIsPaused(false);
-    setRemainingTime(0);
-    setInputTime("");
+    setRemainingTime(initialTime);
     setError("");
     clearTimerInterval();
-  }, [clearTimerInterval]);
+  }, [initialTime, clearTimerInterval]);
 
   const handleInputChange = useCallback(e => {
     const value = e.target.value;
@@ -100,15 +111,53 @@ function CountdownTimer() {
     }
   }, []);
 
-  const subtitleStyle = { mb: 1.5, opacity: 0.9, fontWeight: 600, letterSpacing: 0.5, textAlign: "center" };
-  const timerStyle = { fontFamily: "'Courier New', monospace", fontWeight: 700, textShadow: "2px 2px 4px rgba(0,0,0,0.3)", letterSpacing: "0.1em" };
+  const subtitleStyle = {
+    mb: 1.5,
+    opacity: 0.9,
+    fontWeight: 600,
+    letterSpacing: 0.5,
+    textAlign: "center",
+  };
+
+  const timerStyle = {
+    fontFamily: "'Courier New', monospace",
+    fontWeight: 700,
+    textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+    letterSpacing: "0.1em",
+  };
 
   return (
-    <Container maxWidth="sm" sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", py: 4 }}>
-      <Paper elevation={8} sx={{ width: "100%", background: "rgba(0,0,0,0.5)", borderRadius: 3, p: 4, color: "white" }}>
+    <Container
+      maxWidth="sm"
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        py: 4,
+      }}
+    >
+      <Paper
+        elevation={8}
+        sx={{
+          width: "100%",
+          background: "rgba(0,0,0,0.5)",
+          borderRadius: 3,
+          p: 4,
+          color: "white",
+        }}
+      >
         <Box display="grid" gap={3}>
           {/* Title */}
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 700, textShadow: "2px 2px 4px rgba(0,0,0,0.3)", textAlign: "center" }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+              textAlign: "center",
+            }}
+          >
             Countdown Timer
           </Typography>
 
@@ -123,26 +172,89 @@ function CountdownTimer() {
                 disabled={isActive}
                 inputProps={{ min: 0 }}
               />
-              {error && <Typography variant="caption" sx={{ display: "block", mt: 1, color: "#ff6b6b", fontWeight: 600, textAlign: "center" }}>{error}</Typography>}
+              {error && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: "block",
+                    mt: 1,
+                    color: "#ff6b6b",
+                    fontWeight: 600,
+                    textAlign: "center",
+                  }}
+                >
+                  {error}
+                </Typography>
+              )}
             </Box>
           </Box>
 
           {/* Display */}
           <Box>
-            <Typography variant="subtitle2" sx={subtitleStyle}>Remaining Time</Typography>
-            <Box sx={{ textAlign: "center", background: "rgba(0,0,0,0.2)", p: 3, borderRadius: 2 }}>
-              <Typography variant="h2" sx={timerStyle}>{formatTime(remainingTime)}</Typography>
+            <Typography variant="subtitle2" sx={subtitleStyle}>
+              Remaining Time
+            </Typography>
+            <Box
+              sx={{
+                textAlign: "center",
+                background: "rgba(0,0,0,0.2)",
+                p: 3,
+                borderRadius: 2,
+              }}
+            >
+              <Typography variant="h2" sx={timerStyle}>
+                {formatTime(remainingTime)}
+              </Typography>
             </Box>
           </Box>
 
           {/* Controls */}
           <Box>
-            <Typography variant="subtitle2" sx={{ ...subtitleStyle, mb: 2 }}>Timer Controls</Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center" flexWrap="wrap" gap={2}>
-              <CommonButton buttonType="start" startIcon={<PlayArrow />} onClick={handleStart} disabled={isActive}>Start</CommonButton>
-              <CommonButton buttonType="pause" startIcon={<Pause />} onClick={handlePause} disabled={!isActive || isPaused}>Pause</CommonButton>
-              <CommonButton buttonType="resume" startIcon={<PlaylistAddCheck />} onClick={handleResume} disabled={!isPaused}>Resume</CommonButton>
-              <CommonButton buttonType="reset" startIcon={<Replay />} onClick={handleReset}>Reset</CommonButton>
+            <Typography variant="subtitle2" sx={{ ...subtitleStyle, mb: 2 }}>
+              Timer Controls
+            </Typography>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              justifyContent="center"
+              flexWrap="wrap"
+              gap={2}
+            >
+              <CommonButton
+                buttonType="start"
+                startIcon={<PlayArrow />}
+                onClick={handleStart}
+                disabled={isActive}
+              >
+                Start
+              </CommonButton>
+
+              <CommonButton
+                buttonType="pause"
+                startIcon={<Pause />}
+                onClick={handlePause}
+                disabled={!isActive || isPaused}
+              >
+                Pause
+              </CommonButton>
+
+              <CommonButton
+                buttonType="resume"
+                startIcon={<PlaylistAddCheck />}
+                onClick={handleResume}
+                disabled={!isPaused}
+              >
+                Resume
+              </CommonButton>
+
+              <CommonButton
+                buttonType="reset"
+                startIcon={<Replay />}
+                onClick={handleReset}
+                disabled={!initialTime}
+              >
+                Reset
+              </CommonButton>
             </Stack>
           </Box>
         </Box>
