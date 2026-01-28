@@ -1,0 +1,6 @@
+/* CSS is now handled by MUI components using the sx prop and styled components */
+/* This file can be kept for any global styles if needed */
+
+body {
+  background: #f5f5f5;
+}
